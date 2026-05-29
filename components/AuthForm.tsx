@@ -55,7 +55,7 @@ export function AuthForm({ mode, providers }: Props) {
       toast.error(friendlyAuthError(result.error, `${isSignUp ? 'Sign up' : 'Sign in'} failed. Please try again.`));
     } else {
       toast.success(isSignUp ? 'Account created!' : 'Welcome back!');
-      router.push('/dashboard');
+      router.push('/overview');
       router.refresh();
     }
   }

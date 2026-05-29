@@ -18,7 +18,7 @@ type Props = { current: string; options: ScopeOption[] };
 export function ScopePicker({ current, options }: Props) {
   const router = useRouter();
   return (
-    <Select value={current} onValueChange={(v) => router.push(`/dashboard?scope=${encodeURIComponent(v)}`)}>
+    <Select value={current} onValueChange={(v) => router.push(`/heatmap?scope=${encodeURIComponent(v)}`)}>
       <SelectTrigger size="sm" className="w-[200px]">
         <SelectValue />
       </SelectTrigger>

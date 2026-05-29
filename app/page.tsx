@@ -41,7 +41,7 @@ export default async function LandingPage() {
         <nav className="flex items-center gap-2">
           {signedIn ? (
             <Button asChild>
-              <Link href="/dashboard">Open app <ArrowRight className="size-4" /></Link>
+              <Link href="/overview">Open app <ArrowRight className="size-4" /></Link>
             </Button>
           ) : (
             <>
@@ -71,8 +71,8 @@ export default async function LandingPage() {
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Button asChild size="lg">
-              <Link href={signedIn ? '/dashboard' : '/auth/sign-up'}>
-                {signedIn ? 'Open the heatmap' : 'Get started free'} <ArrowRight className="size-4" />
+              <Link href={signedIn ? '/overview' : '/auth/sign-up'}>
+                {signedIn ? 'Open app' : 'Get started free'} <ArrowRight className="size-4" />
               </Link>
             </Button>
             {!signedIn && (

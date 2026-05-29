@@ -23,7 +23,8 @@ function initials(name?: string | null): string {
 type Props = { userName?: string | null; userImage?: string | null };
 
 const LINKS = [
-  { href: '/dashboard', label: 'Heatmap' },
+  { href: '/overview', label: 'Home' },
+  { href: '/heatmap', label: 'Heatmap' },
   { href: '/my-slots', label: 'My Slots' },
   { href: '/appointments', label: 'Appointments' },
   { href: '/org', label: 'Org' },

@@ -36,7 +36,7 @@ export function SocialAuthButtons({ providers }: { providers: Provider[] }) {
   async function signInWith(provider: Provider) {
     setPending(provider);
     // OAuth redirects away; on return Better Auth lands the user on callbackURL.
-    const { error } = await authClient.signIn.social({ provider, callbackURL: '/dashboard' });
+    const { error } = await authClient.signIn.social({ provider, callbackURL: '/overview' });
     if (error) {
       setPending(null);
       toast.error(friendlyAuthError(error, `Couldn't sign in with ${LABEL[provider]}. Please try again.`));

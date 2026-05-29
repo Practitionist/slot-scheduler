@@ -32,7 +32,7 @@ function AcceptInner() {
     } else {
       setDone(true);
       toast.success('You joined the organization!');
-      router.push('/dashboard');
+      router.push('/overview');
       router.refresh();
     }
   }
