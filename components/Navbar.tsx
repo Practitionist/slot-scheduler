@@ -41,7 +41,8 @@ export function Navbar({ userName, userImage }: Props) {
   }
 
   return (
-    <nav className="mb-8 flex items-center justify-between border-b pb-4">
+    <nav className="bg-background/80 sticky top-0 z-20 border-b backdrop-blur">
+      <div className="flex items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
       <div className="flex items-center gap-6">
         <span className="flex items-center gap-2 font-semibold">
           <CalendarClock className="size-5 text-primary" />
@@ -78,6 +79,7 @@ export function Navbar({ userName, userImage }: Props) {
           <LogOut className="size-4" />
           Sign out
         </Button>
+      </div>
       </div>
     </nav>
   );

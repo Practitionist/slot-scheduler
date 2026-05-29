@@ -50,7 +50,9 @@ export const auth = betterAuth({
   },
   plugins: [
     organization({
-      teams: { enabled: true },
+      // Don't auto-create a default team named after the org — the org-creation
+      // UI asks the creator to pick starter teams (Engineering, UI/UX, …) instead.
+      teams: { enabled: true, defaultTeam: { enabled: false } },
       // We have no email provider yet, so don't gate invites on email
       // verification; the admin shares the accept link from the UI instead.
       requireEmailVerificationOnInvitation: false,

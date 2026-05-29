@@ -2,10 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Copy, Plus, Users } from 'lucide-react';
+import { Check, Copy, Plus, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { authClient } from '@/lib/auth-client';
-import { Navbar } from '@/components/Navbar';
 import { TeamManagement } from '@/components/TeamManagement';
 import { ProductManagement } from '@/components/ProductManagement';
 import { Button } from '@/components/ui/button';
@@ -31,6 +30,8 @@ function initials(name?: string | null) {
   return (p.length === 1 ? p[0].slice(0, 2) : p[0][0] + p[p.length - 1][0]).toUpperCase();
 }
 
+const STARTER_TEAM_PRESETS = ['Engineering', 'UI/UX', 'Testing', 'Finance', 'Product', 'Design', 'Marketing', 'Operations'];
+
 export default function OrgPage() {
   const router = useRouter();
   const { data: session } = authClient.useSession();
@@ -42,21 +43,38 @@ export default function OrgPage() {
   const teams = ((activeOrg as { teams?: { id: string; name: string }[] } | null)?.teams) ?? [];
 
   const [orgName, setOrgName] = useState('');
+  const [starterTeams, setStarterTeams] = useState<string[]>(['Engineering', 'UI/UX', 'Testing']);
+  const [customTeam, setCustomTeam] = useState('');
   const [teamName, setTeamName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteTeam, setInviteTeam] = useState<string>('none');
   const [busy, setBusy] = useState(false);
 
+  function toggleStarter(name: string) {
+    setStarterTeams((prev) => (prev.includes(name) ? prev.filter((t) => t !== name) : [...prev, name]));
+  }
+  function addCustomTeam() {
+    const n = customTeam.trim();
+    if (n && !starterTeams.includes(n)) setStarterTeams((prev) => [...prev, n]);
+    setCustomTeam('');
+  }
+
   async function createOrg(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     const { data, error } = await authClient.organization.create({ name: orgName, slug: slugify(orgName) });
-    if (error) toast.error(error.message ?? 'Could not create organization');
-    else {
-      await authClient.organization.setActive({ organizationId: data!.id });
-      toast.success(`Created ${orgName}`);
-      setOrgName('');
+    if (error || !data) {
+      toast.error(error?.message ?? 'Could not create organization');
+      setBusy(false);
+      return;
     }
+    await authClient.organization.setActive({ organizationId: data.id });
+    // Create the chosen starter teams (no auto default team).
+    for (const name of starterTeams) {
+      await authClient.organization.createTeam({ name, organizationId: data.id });
+    }
+    toast.success(`Created ${orgName}${starterTeams.length ? ` with ${starterTeams.length} team(s)` : ''}`);
+    setOrgName('');
     setBusy(false);
   }
 
@@ -91,8 +109,7 @@ export default function OrgPage() {
   if (isPending) return null;
 
   return (
-    <main className="mx-auto max-w-3xl p-6">
-      <Navbar />
+    <main className="mx-auto max-w-3xl">
 
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold tracking-tight">Organization</h1>
@@ -119,13 +136,60 @@ export default function OrgPage() {
             <CardTitle className="text-base">Create your organization</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={createOrg} className="flex items-end gap-2">
-              <div className="flex-1 space-y-2">
+            <form onSubmit={createOrg} className="space-y-4">
+              <div className="space-y-2">
                 <Label htmlFor="orgName">Name</Label>
                 <Input id="orgName" value={orgName} onChange={(e) => setOrgName(e.target.value)} required placeholder="Acme Interns" />
               </div>
+
+              <div className="space-y-2">
+                <Label>Starter teams</Label>
+                <p className="text-muted-foreground text-xs">Pick the teams to create now — you can add more later.</p>
+                <div className="flex flex-wrap gap-2">
+                  {STARTER_TEAM_PRESETS.map((name) => {
+                    const on = starterTeams.includes(name);
+                    return (
+                      <button
+                        type="button"
+                        key={name}
+                        onClick={() => toggleStarter(name)}
+                        className={`flex items-center gap-1 rounded-full border px-3 py-1 text-sm transition-colors ${on ? 'bg-secondary border-transparent' : 'hover:bg-muted'}`}
+                      >
+                        {on && <Check className="size-3" />} {name}
+                      </button>
+                    );
+                  })}
+                  {starterTeams
+                    .filter((t) => !STARTER_TEAM_PRESETS.includes(t))
+                    .map((name) => (
+                      <button
+                        type="button"
+                        key={name}
+                        onClick={() => toggleStarter(name)}
+                        className="bg-secondary flex items-center gap-1 rounded-full border border-transparent px-3 py-1 text-sm"
+                      >
+                        <Check className="size-3" /> {name}
+                      </button>
+                    ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    value={customTeam}
+                    onChange={(e) => setCustomTeam(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.preventDefault(); addCustomTeam(); }
+                    }}
+                    placeholder="Add a custom team…"
+                    className="max-w-xs"
+                  />
+                  <Button type="button" variant="outline" onClick={addCustomTeam} disabled={!customTeam.trim()}>
+                    <Plus className="size-4" /> Add
+                  </Button>
+                </div>
+              </div>
+
               <Button type="submit" disabled={busy || !orgName.trim()}>
-                <Plus className="size-4" /> Create
+                <Plus className="size-4" /> Create organization
               </Button>
             </form>
           </CardContent>

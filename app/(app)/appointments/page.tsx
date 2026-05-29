@@ -5,7 +5,6 @@ import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 import { CalendarPlus, Check, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { authClient } from '@/lib/auth-client';
-import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -109,8 +108,7 @@ export default function AppointmentsPage() {
   }
 
   return (
-    <main className="mx-auto max-w-2xl p-6">
-      <Navbar userName={session?.user?.name} userImage={session?.user?.image} />
+    <main className="mx-auto max-w-2xl">
 
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">Appointments</h1>

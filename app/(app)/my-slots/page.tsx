@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { Plus, X } from 'lucide-react';
-import { Navbar } from '@/components/Navbar';
 import { SlotList } from '@/components/SlotList';
 import { SlotForm } from '@/components/SlotForm';
 import { TimezoneSelect } from '@/components/TimezoneSelect';
@@ -29,8 +28,7 @@ export default function MySlotsPage() {
   }, []);
 
   return (
-    <main className="mx-auto max-w-2xl p-6">
-      <Navbar />
+    <main className="mx-auto max-w-2xl">
 
       <div className="mb-6 flex items-start justify-between gap-4">
         <div className="space-y-2">

@@ -5,7 +5,6 @@ import { formatInTimeZone } from 'date-fns-tz';
 import { CalendarCheck, CalendarClock, Clock, ArrowRight, Building2, CalendarPlus } from 'lucide-react';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,8 +41,7 @@ export default async function OverviewPage() {
   const firstName = session.user.name?.split(/\s+/)[0] ?? 'there';
 
   return (
-    <main className="mx-auto max-w-5xl p-6">
-      <Navbar userName={session.user.name} userImage={session.user.image} />
+    <main>
 
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">Welcome back, {firstName} 👋</h1>

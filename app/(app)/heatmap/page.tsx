@@ -4,7 +4,6 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { computeHeatmap } from '@/lib/heatmap';
 import { WeeklyHeatmap } from '@/components/WeeklyHeatmap';
-import { Navbar } from '@/components/Navbar';
 import { ScopePicker, type ScopeOption } from '@/components/ScopePicker';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -87,8 +86,7 @@ export default async function DashboardPage({
   const uniqueInterns = new Set(slots.map((s) => s.userId)).size;
 
   return (
-    <main className="mx-auto max-w-6xl p-6">
-      <Navbar userName={session?.user?.name} userImage={session?.user?.image} />
+    <main>
 
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
