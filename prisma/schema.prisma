@@ -25,6 +25,7 @@ model User {
   sentInvitations       Invitation[]          @relation("SentInvitations")
   organizedAppointments Appointment[]         @relation("OrganizedAppointments")
   appointmentInvites    AppointmentAttendee[] @relation("AppointmentInvites")
+  productMembers        ProductMember[]
 }
 
 model Session {
@@ -100,6 +101,7 @@ model Organization {
   members     Member[]
   invitations Invitation[]
   teams       Team[]
+  products    Product[]
 }
 
 model Member {
@@ -183,5 +185,31 @@ model AppointmentAttendee {
   respondedAt   DateTime?
 
   @@unique([appointmentId, userId])
+  @@index([userId])
+}
+
+// ── Product: a cross-cutting grouping orthogonal to Team (matrix orgs) ───────
+// A Product belongs to an Org and groups members directly (many-to-many), so it
+// works whether a company thinks of "product" as above or below team. See #6.
+model Product {
+  id             String          @id @default(cuid())
+  name           String
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime        @default(now())
+  members        ProductMember[]
+
+  @@index([organizationId])
+}
+
+model ProductMember {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([productId, userId])
   @@index([userId])
 }

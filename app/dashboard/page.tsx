@@ -26,12 +26,17 @@ export default async function DashboardPage({
   if (activeOrgId) {
     const org = await prisma.organization.findUnique({
       where: { id: activeOrgId },
-      select: { name: true, teams: { select: { id: true, name: true }, orderBy: { name: 'asc' } } },
+      select: {
+        name: true,
+        teams: { select: { id: true, name: true }, orderBy: { name: 'asc' } },
+        products: { select: { id: true, name: true }, orderBy: { name: 'asc' } },
+      },
     });
     if (org) {
       orgName = org.name;
       options.push({ value: 'org', label: `${org.name} (whole org)` });
       for (const t of org.teams) options.push({ value: `team:${t.id}`, label: `Team · ${t.name}` });
+      for (const p of org.products) options.push({ value: `product:${p.id}`, label: `Product · ${p.name}` });
     }
   }
 
@@ -49,6 +54,8 @@ export default async function DashboardPage({
     where = { user: { members: { some: { organizationId: activeOrgId } } } };
   } else if (scope.startsWith('team:')) {
     where = { user: { teamMembers: { some: { teamId: scope.slice(5) } } } };
+  } else if (scope.startsWith('product:')) {
+    where = { user: { productMembers: { some: { productId: scope.slice(8) } } } };
   }
 
   const slots = await prisma.availabilitySlot.findMany({
