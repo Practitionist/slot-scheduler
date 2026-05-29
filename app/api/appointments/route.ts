@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { sendAppointmentInviteEmail } from '@/lib/email';
 
 export async function GET() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -68,6 +69,27 @@ export async function POST(req: Request) {
       attendees: { create: ids.map((userId) => ({ userId, status: 'pending' })) },
     },
   });
+
+  // Send invite emails to attendees (fire-and-forget; never block the response).
+  if (ids.length > 0) {
+    const attendeeUsers = await prisma.user.findMany({
+      where: { id: { in: ids } },
+      select: { email: true },
+    });
+    Promise.allSettled(
+      attendeeUsers.map((u) =>
+        sendAppointmentInviteEmail({
+          to: u.email,
+          appointmentTitle: appointment.title,
+          organizerName: session.user.name,
+          startsAt: appointment.startsAt,
+          endsAt: appointment.endsAt,
+          timezone: appointment.timezone,
+          description: appointment.description,
+        })
+      )
+    );
+  }
 
   return NextResponse.json(appointment, { status: 201 });
 }

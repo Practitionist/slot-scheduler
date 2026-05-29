@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, Copy, Plus, Trash2, Users } from 'lucide-react';
+import { Check, Copy, Key, Plus, Trash2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { authClient } from '@/lib/auth-client';
 import { TeamManagement } from '@/components/TeamManagement';
@@ -53,6 +53,27 @@ export default function OrgPage() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteTeam, setInviteTeam] = useState<string>('none');
   const [busy, setBusy] = useState(false);
+
+  type JoinCode = {
+    id: string; code: string; orgId: string; teamId: string | null;
+    productId: string | null; role: string; expiresAt: string | null;
+    maxUses: number | null; uses: number; createdAt: string;
+    createdBy: { name: string };
+  };
+  const [joinCodes, setJoinCodes] = useState<JoinCode[]>([]);
+  const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
+  const [codeTeam, setCodeTeam] = useState('none');
+  const [codeProduct, setCodeProduct] = useState('none');
+  const [codeExpiry, setCodeExpiry] = useState('');
+  const [codeMaxUses, setCodeMaxUses] = useState('');
+
+  useEffect(() => {
+    if (!activeOrg || !isAdmin) return;
+    fetch('/api/join-codes').then((r) => r.json()).then(setJoinCodes).catch(() => {});
+    fetch('/api/products').then((r) => r.json()).then((data) =>
+      setProducts(data.map((p: { id: string; name: string }) => ({ id: p.id, name: p.name })))
+    ).catch(() => {});
+  }, [activeOrg?.id, isAdmin]);
 
   function toggleStarter(name: string) {
     setStarterTeams((prev) => (prev.includes(name) ? prev.filter((t) => t !== name) : [...prev, name]));
@@ -108,6 +129,37 @@ export default function OrgPage() {
       setInviteEmail('');
     }
     setBusy(false);
+  }
+
+  async function generateCode(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    const res = await fetch('/api/join-codes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        teamId: codeTeam !== 'none' ? codeTeam : undefined,
+        productId: codeProduct !== 'none' ? codeProduct : undefined,
+        expiresInDays: codeExpiry ? Number(codeExpiry) : undefined,
+        maxUses: codeMaxUses ? Number(codeMaxUses) : undefined,
+      }),
+    });
+    if (!res.ok) {
+      toast.error('Could not generate code');
+    } else {
+      const code: JoinCode = await res.json();
+      setJoinCodes((prev) => [code, ...prev]);
+      toast.success(`Code ${code.code} created`);
+      setCodeTeam('none'); setCodeProduct('none'); setCodeExpiry(''); setCodeMaxUses('');
+    }
+    setBusy(false);
+  }
+
+  async function revokeCode(id: string, code: string) {
+    if (!confirm(`Revoke code ${code}? Anyone who has it will no longer be able to join.`)) return;
+    const res = await fetch(`/api/join-codes/${id}`, { method: 'DELETE' });
+    if (res.ok) setJoinCodes((prev) => prev.filter((c) => c.id !== id));
+    else toast.error('Could not revoke code');
   }
 
   async function changeRole(memberId: string, role: string) {
@@ -283,7 +335,7 @@ export default function OrgPage() {
                 </Button>
               </form>
               <p className="text-muted-foreground mt-2 text-xs">
-                No email is sent yet — the accept link is copied to your clipboard to share.
+                An email is sent to the invitee automatically. The accept link is also copied to your clipboard as a backup.
               </p>
             </CardContent>
           </Card>
@@ -346,6 +398,121 @@ export default function OrgPage() {
                     </li>
                   ))}
                 </ul>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Join Codes — admin only */}
+          {isAdmin && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Key className="size-4" /> Join codes
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-muted-foreground text-xs">
+                  Share a code so people can join without a per-email invite. Codes can optionally also add them to a team or product.
+                  Anyone with the URL <code className="bg-muted rounded px-1">/join</code> can enter a code to join.
+                </p>
+
+                {/* Existing codes */}
+                {joinCodes.length > 0 && (
+                  <ul className="space-y-2">
+                    {joinCodes.map((jc) => {
+                      const teamName = teams.find((t) => t.id === jc.teamId)?.name;
+                      const productName = products.find((p) => p.id === jc.productId)?.name;
+                      const scopeLabel = [
+                        teamName && `Team: ${teamName}`,
+                        productName && `Product: ${productName}`,
+                      ].filter(Boolean).join(' · ') || 'Org only';
+                      const expired = jc.expiresAt && new Date(jc.expiresAt) < new Date();
+                      return (
+                        <li key={jc.id} className="flex flex-wrap items-center gap-2 text-sm">
+                          <code className="bg-muted rounded px-2 py-0.5 font-mono font-semibold tracking-wider">
+                            {jc.code}
+                          </code>
+                          <Badge variant="outline" className="text-xs">{scopeLabel}</Badge>
+                          <span className="text-muted-foreground text-xs">
+                            {jc.uses}{jc.maxUses != null ? `/${jc.maxUses}` : ''} uses
+                            {jc.expiresAt && ` · expires ${new Date(jc.expiresAt).toLocaleDateString()}`}
+                            {expired && ' (expired)'}
+                          </span>
+                          <div className="ml-auto flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const url = `${window.location.origin}/join`;
+                                navigator.clipboard.writeText(`${url}\nCode: ${jc.code}`).then(() =>
+                                  toast.success('Join link + code copied')
+                                );
+                              }}
+                            >
+                              <Copy className="size-3" /> Copy
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive"
+                              onClick={() => revokeCode(jc.id, jc.code)}
+                            >
+                              <Trash2 className="size-3" /> Revoke
+                            </Button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+
+                {/* Generate new code */}
+                <form onSubmit={generateCode} className="space-y-3 pt-2 border-t">
+                  <p className="text-xs font-medium">Generate new code</p>
+                  <div className="flex flex-wrap gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Team scope</Label>
+                      <Select value={codeTeam} onValueChange={setCodeTeam}>
+                        <SelectTrigger className="h-8 w-[160px] text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Org only</SelectItem>
+                          {teams.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {products.length > 0 && (
+                      <div className="space-y-1">
+                        <Label className="text-xs">Product scope</Label>
+                        <Select value={codeProduct} onValueChange={setCodeProduct}>
+                          <SelectTrigger className="h-8 w-[160px] text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">None</SelectItem>
+                            {products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    <div className="space-y-1">
+                      <Label className="text-xs">Expires in (days)</Label>
+                      <Input
+                        type="number" min={1} value={codeExpiry}
+                        onChange={(e) => setCodeExpiry(e.target.value)}
+                        placeholder="∞" className="h-8 w-[100px] text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Max uses</Label>
+                      <Input
+                        type="number" min={1} value={codeMaxUses}
+                        onChange={(e) => setCodeMaxUses(e.target.value)}
+                        placeholder="∞" className="h-8 w-[100px] text-xs"
+                      />
+                    </div>
+                  </div>
+                  <Button type="submit" variant="outline" size="sm" disabled={busy}>
+                    <Key className="size-3" /> Generate code
+                  </Button>
+                </form>
               </CardContent>
             </Card>
           )}
