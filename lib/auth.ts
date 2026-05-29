@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
+import { organization } from 'better-auth/plugins/organization';
 import { prisma } from './prisma';
 import { enabledOAuthProviders } from './oauth';
 
@@ -47,6 +48,22 @@ export const auth = betterAuth({
       },
     },
   },
+  plugins: [
+    organization({
+      teams: { enabled: true },
+      // We have no email provider yet, so don't gate invites on email
+      // verification; the admin shares the accept link from the UI instead.
+      requireEmailVerificationOnInvitation: false,
+      async sendInvitationEmail(data) {
+        // No transactional email configured yet — log the accept link so it's
+        // recoverable, and the /org UI shows a copy-able link to the admin.
+        const base = process.env.BETTER_AUTH_URL ?? 'http://localhost:3000';
+        console.log(
+          `[invite] ${data.email} -> ${base}/accept-invitation?id=${data.id} (org=${data.organization.name})`
+        );
+      },
+    }),
+  ],
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL,
 });

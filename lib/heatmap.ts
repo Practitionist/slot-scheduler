@@ -21,6 +21,7 @@ export type HeatmapCell = {
   slotStart: string;
   count: number;
   users: SlotUser[];
+  isGolden: boolean; // peak simultaneous availability — best cross-tz meeting window
 };
 
 export function generateTimeSlots(startHour = 6, endHour = 23): string[] {
@@ -106,7 +107,17 @@ export function computeHeatmap(
         }
       }
 
-      cells.push({ day, slotStart, count: users.length, users });
+      cells.push({ day, slotStart, count: users.length, users, isGolden: false });
+    }
+  }
+
+  // Golden hours: the 30-min cells with peak simultaneous availability — the
+  // best meeting window, especially useful for cross-continent teams. Only
+  // meaningful when at least two people overlap.
+  const maxCount = Math.max(0, ...cells.map((c) => c.count));
+  if (maxCount >= 2) {
+    for (const cell of cells) {
+      if (cell.count === maxCount) cell.isGolden = true;
     }
   }
 

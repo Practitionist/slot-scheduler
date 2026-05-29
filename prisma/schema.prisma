@@ -20,6 +20,11 @@ model User {
   sessions      Session[]
   accounts      Account[]
   slots         AvailabilitySlot[]
+  members       Member[]
+  teamMembers   TeamMember[]
+  sentInvitations       Invitation[]          @relation("SentInvitations")
+  organizedAppointments Appointment[]         @relation("OrganizedAppointments")
+  appointmentInvites    AppointmentAttendee[] @relation("AppointmentInvites")
 }
 
 model Session {
@@ -32,6 +37,9 @@ model Session {
   userAgent String?
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Better Auth organization plugin: tracks the session's active org/team
+  activeOrganizationId String?
+  activeTeamId         String?
 }
 
 model Account {
@@ -77,5 +85,103 @@ model AvailabilitySlot {
 
   @@unique([userId, dayOfWeek, startTime, endTime])
   @@index([dayOfWeek, startTime, endTime])
+  @@index([userId])
+}
+
+// ── Better Auth organization plugin tables ──────────────────────────────────
+model Organization {
+  id          String       @id
+  name        String
+  slug        String       @unique
+  logo        String?
+  metadata    String?
+  createdAt   DateTime
+  updatedAt   DateTime?
+  members     Member[]
+  invitations Invitation[]
+  teams       Team[]
+}
+
+model Member {
+  id             String       @id
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String       @default("member")
+  teamId         String?
+  createdAt      DateTime
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
+model Invitation {
+  id             String       @id
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String
+  role           String?
+  status         String       @default("pending")
+  teamId         String?
+  inviterId      String
+  inviter        User         @relation("SentInvitations", fields: [inviterId], references: [id], onDelete: Cascade)
+  expiresAt      DateTime
+  createdAt      DateTime
+
+  @@index([organizationId])
+  @@index([email])
+}
+
+model Team {
+  id             String       @id
+  name           String
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime
+  updatedAt      DateTime?
+  teamMembers    TeamMember[]
+}
+
+model TeamMember {
+  id        String   @id
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime
+
+  @@unique([teamId, userId])
+  @@index([userId])
+}
+
+// ── Appointments (one-off meetings with RSVP) ───────────────────────────────
+model Appointment {
+  id          String                @id @default(cuid())
+  organizerId String
+  organizer   User                  @relation("OrganizedAppointments", fields: [organizerId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  startsAt    DateTime // absolute UTC instant
+  endsAt      DateTime // absolute UTC instant
+  timezone    String   // organizer's IANA tz the meeting was scheduled in
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  attendees   AppointmentAttendee[]
+
+  @@index([organizerId])
+  @@index([startsAt])
+}
+
+model AppointmentAttendee {
+  id            String      @id @default(cuid())
+  appointmentId String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User        @relation("AppointmentInvites", fields: [userId], references: [id], onDelete: Cascade)
+  status        String      @default("pending") // pending | accepted | declined
+  respondedAt   DateTime?
+
+  @@unique([appointmentId, userId])
   @@index([userId])
 }

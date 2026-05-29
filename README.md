@@ -1,5 +1,20 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Developer tooling (recommended MCP servers)
+
+These [MCP](https://modelcontextprotocol.io) servers make working on this project in an AI coding
+agent (e.g. Claude Code) much smoother. Add the ones you use:
+
+| MCP | Why it helps here | Setup |
+| --- | --- | --- |
+| **Neon** | Create dev/preview **DB branches**, run SQL, inspect schema, apply migrations — ideal for giving `dev`/preview deploys their own database. | `claude mcp add neon -- npx -y @neondatabase/mcp-server-neon start` |
+| **Netlify** | Trigger deploys, read build logs, set env vars, check deploy/preview status without CLI round-trips. | `claude mcp add netlify -- npx -y @netlify/mcp` |
+| **Chrome DevTools / Playwright** | Drive a real browser to click through OAuth, verify the heatmap/appointments UI, and screenshot. | `claude mcp add playwright -- npx -y @playwright/mcp@latest` |
+| **Context7** | Pull up-to-date docs for the fast-moving libs we use (Next 16, Better Auth, Prisma 7). | `claude mcp add context7 -- npx -y @upstash/context7-mcp` |
+
+> Tip: Neon + Netlify together let an agent provision a preview DB and wire it into a Netlify deploy
+> preview end-to-end. None are required to run the app locally.
+
 ## Getting Started
 
 First, run the development server:
