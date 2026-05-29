@@ -1,6 +1,8 @@
 import { PrismaClient } from '@/app/generated/prisma/client';
 import { PrismaNeonHttp } from '@prisma/adapter-neon';
 
+// Note: the IPv4 network fix lives in instrumentation.ts (Node-level, applied at
+// server startup), so it is database-agnostic and not coupled to this adapter.
 const adapter = new PrismaNeonHttp(process.env.DATABASE_URL!, {});
 
 // Neon's serverless compute auto-suspends when idle (free tier). The first query
