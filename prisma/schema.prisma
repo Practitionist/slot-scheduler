@@ -14,6 +14,7 @@ model User {
   email         String             @unique
   emailVerified Boolean
   image         String?
+  timezone      String             @default("Asia/Kolkata") // IANA tz name; slot HH:MM are wall-clock in this zone
   createdAt     DateTime
   updatedAt     DateTime
   sessions      Session[]
@@ -68,8 +69,8 @@ model AvailabilitySlot {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   dayOfWeek Int      // 0=Mon ... 6=Sun
-  startTime String   // "HH:MM" IST
-  endTime   String   // "HH:MM" IST
+  startTime String   // "HH:MM" wall-clock in the owning user's timezone (User.timezone)
+  endTime   String   // "HH:MM" wall-clock in the owning user's timezone (User.timezone)
   label     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

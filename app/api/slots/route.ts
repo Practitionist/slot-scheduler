@@ -4,22 +4,27 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 export async function GET() {
+  // Require an authenticated intern — don't rely on middleware alone, and never
+  // expose the full roster's availability to anonymous callers.
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user) return new Response('Unauthorized', { status: 401 });
+
   const slots = await prisma.availabilitySlot.findMany({
     select: {
       id: true,
-      userId: true,
       dayOfWeek: true,
       startTime: true,
       endTime: true,
       label: true,
-      user: { select: { name: true } },
+      user: { select: { name: true, image: true, timezone: true } },
     },
   });
 
   const mapped = slots.map((s) => ({
     id: s.id,
-    userId: s.userId,
     userName: s.user.name,
+    userImage: s.user.image,
+    userTimezone: s.user.timezone,
     dayOfWeek: s.dayOfWeek,
     startTime: s.startTime,
     endTime: s.endTime,
