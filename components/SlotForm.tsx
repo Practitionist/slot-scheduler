@@ -1,6 +1,18 @@
 'use client';
 
 import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -34,15 +46,13 @@ export function SlotForm({ initial, onSuccess, onCancel }: Props) {
   const [start, setStart] = useState(initial?.startTime ?? '09:00');
   const [end, setEnd] = useState(initial?.endTime ?? '17:00');
   const [label, setLabel] = useState(initial?.label ?? '');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError('');
 
     if (start >= end) {
-      setError('Start time must be before end time');
+      toast.error('Start time must be before end time.');
       return;
     }
 
@@ -59,90 +69,85 @@ export function SlotForm({ initial, onSuccess, onCancel }: Props) {
     setLoading(false);
 
     if (res.ok) {
+      toast.success(initial ? 'Slot updated' : 'Slot added');
       onSuccess();
     } else {
       const msg = await res.text();
-      setError(msg || 'Something went wrong');
+      toast.error(msg || 'Something went wrong.');
     }
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium mb-1">Day</label>
-        <select
-          value={day}
-          onChange={(e) => setDay(Number(e.target.value))}
-          className="w-full border rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
-        >
-          {DAYS.map((d, i) => (
-            <option key={d} value={i}>
-              {d}
-            </option>
-          ))}
-        </select>
+      <div className="space-y-2">
+        <Label>Day</Label>
+        <Select value={String(day)} onValueChange={(v) => setDay(Number(v))}>
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {DAYS.map((d, i) => (
+              <SelectItem key={d} value={String(i)}>
+                {d}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-sm font-medium mb-1">From</label>
-          <select
-            value={start}
-            onChange={(e) => setStart(e.target.value)}
-            className="w-full border rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
-          >
-            {TIME_OPTIONS.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
+        <div className="space-y-2">
+          <Label>From</Label>
+          <Select value={start} onValueChange={setStart}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="max-h-72">
+              {TIME_OPTIONS.map((t) => (
+                <SelectItem key={t} value={t}>
+                  {t}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">To</label>
-          <select
-            value={end}
-            onChange={(e) => setEnd(e.target.value)}
-            className="w-full border rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
-          >
-            {TIME_OPTIONS.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
+        <div className="space-y-2">
+          <Label>To</Label>
+          <Select value={end} onValueChange={setEnd}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="max-h-72">
+              {TIME_OPTIONS.map((t) => (
+                <SelectItem key={t} value={t}>
+                  {t}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium mb-1">Label (optional)</label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="label">Label (optional)</Label>
+        <Input
+          id="label"
           type="text"
           value={label}
           onChange={(e) => setLabel(e.target.value)}
-          className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
           placeholder="e.g. Morning focus block"
         />
       </div>
 
-      {error && <p className="text-red-600 text-sm">{error}</p>}
-
       <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50 font-medium"
-        >
-          {loading ? 'Saving...' : initial ? 'Update Slot' : 'Add Slot'}
-        </button>
+        <Button type="submit" disabled={loading}>
+          {loading && <Loader2 className="size-4 animate-spin" />}
+          {initial ? 'Update slot' : 'Add slot'}
+        </Button>
         {onCancel && (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 border rounded hover:bg-gray-100 font-medium"
-          >
+          <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
-          </button>
+          </Button>
         )}
       </div>
     </form>
