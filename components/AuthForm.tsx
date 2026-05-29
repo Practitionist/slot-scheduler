@@ -133,7 +133,7 @@ export function AuthForm({ mode, providers }: Props) {
           <p className="text-muted-foreground text-sm">
             {isSignUp ? 'Already have an account? ' : 'No account? '}
             <Link
-              href={isSignUp ? '/sign-in' : '/sign-up'}
+              href={isSignUp ? '/auth/sign-in' : '/auth/sign-up'}
               className="text-foreground font-medium underline-offset-4 hover:underline"
             >
               {isSignUp ? 'Sign in' : 'Sign up'}

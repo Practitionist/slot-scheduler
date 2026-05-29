@@ -80,7 +80,7 @@ export default function OrgPage() {
     if (error || !data) {
       toast.error(error?.message ?? 'Could not create invitation');
     } else {
-      const link = `${window.location.origin}/accept-invitation?id=${data.id}`;
+      const link = `${window.location.origin}/auth/accept-invitation?id=${data.id}`;
       await navigator.clipboard.writeText(link).catch(() => {});
       toast.success('Invite link copied — share it with the intern', { description: link });
       setInviteEmail('');
@@ -243,7 +243,7 @@ export default function OrgPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => {
-                          const link = `${window.location.origin}/accept-invitation?id=${i.id}`;
+                          const link = `${window.location.origin}/auth/accept-invitation?id=${i.id}`;
                           navigator.clipboard.writeText(link).then(() => toast.success('Invite link copied'));
                         }}
                       >
