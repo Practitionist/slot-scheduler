@@ -4,6 +4,7 @@ import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { organization } from 'better-auth/plugins/organization';
 import { prisma } from './prisma';
 import { enabledOAuthProviders } from './oauth';
+import { sendInvitationEmail } from './email';
 
 // Register ONLY providers that have both id + secret. Registering a provider
 // with empty creds makes Better Auth build a broken authorize URL (and spam
@@ -81,16 +82,13 @@ export const auth = betterAuth({
       // Don't auto-create a default team named after the org — the org-creation
       // UI asks the creator to pick starter teams (Engineering, UI/UX, …) instead.
       teams: { enabled: true, defaultTeam: { enabled: false } },
-      // We have no email provider yet, so don't gate invites on email
-      // verification; the admin shares the accept link from the UI instead.
       requireEmailVerificationOnInvitation: false,
       async sendInvitationEmail(data) {
-        // No transactional email configured yet — log the accept link so it's
-        // recoverable, and the /org UI shows a copy-able link to the admin.
         const base = process.env.BETTER_AUTH_URL ?? 'http://localhost:3000';
-        console.log(
-          `[invite] ${data.email} -> ${base}/auth/accept-invitation?id=${data.id} (org=${data.organization.name})`
-        );
+        const acceptUrl = `${base}/auth/accept-invitation?id=${data.id}`;
+        // Always log so the link is recoverable without email in local dev.
+        console.log(`[invite] ${data.email} -> ${acceptUrl} (org=${data.organization.name})`);
+        await sendInvitationEmail({ to: data.email, orgName: data.organization.name, acceptUrl });
       },
     }),
   ],

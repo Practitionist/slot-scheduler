@@ -26,6 +26,7 @@ model User {
   organizedAppointments Appointment[]         @relation("OrganizedAppointments")
   appointmentInvites    AppointmentAttendee[] @relation("AppointmentInvites")
   productMembers        ProductMember[]
+  createdJoinCodes      JoinCode[]            @relation("CreatedJoinCodes")
 }
 
 model Session {
@@ -102,6 +103,7 @@ model Organization {
   invitations Invitation[]
   teams       Team[]
   products    Product[]
+  joinCodes   JoinCode[]
 }
 
 model Member {
@@ -212,4 +214,24 @@ model ProductMember {
 
   @@unique([productId, userId])
   @@index([userId])
+}
+
+// ── Join codes: invite-link alternative — share a code, skip per-email invite ─
+model JoinCode {
+  id          String       @id @default(cuid())
+  code        String       @unique
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  teamId      String?      // if set, also adds joiner to this team
+  productId   String?      // if set, also adds joiner to this product
+  role        String       @default("member")
+  expiresAt   DateTime?    // null = never expires
+  maxUses     Int?         // null = unlimited
+  uses        Int          @default(0)
+  createdById String
+  createdBy   User         @relation("CreatedJoinCodes", fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+
+  @@index([orgId])
+  @@index([code])
 }
