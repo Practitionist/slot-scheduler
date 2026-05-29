@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, Star, UserMinus } from 'lucide-react';
+import { Plus, Star, Trash2, UserMinus } from 'lucide-react';
 import { toast } from 'sonner';
 import { authClient } from '@/lib/auth-client';
 import { Button } from '@/components/ui/button';
@@ -29,11 +29,13 @@ export function TeamManagement({
   teams,
   members,
   activeTeamId,
+  isAdmin,
   onChanged,
 }: {
   teams: Team[];
   members: OrgMember[];
   activeTeamId: string | null;
+  isAdmin: boolean;
   onChanged: () => void;
 }) {
   // teamId -> set of member userIds
@@ -60,6 +62,13 @@ export function TeamManagement({
 
   function memberOf(userId: string) {
     return members.find((m) => m.userId === userId)?.user;
+  }
+
+  async function deleteTeam(teamId: string, name: string) {
+    if (!confirm(`Delete team "${name}"?`)) return;
+    const { error } = await authClient.organization.removeTeam({ teamId });
+    if (error) toast.error(error.message ?? 'Could not delete team');
+    else { toast.success('Team deleted'); onChanged(); }
   }
 
   async function addMember(teamId: string) {
@@ -115,6 +124,16 @@ export function TeamManagement({
                     Set active
                   </Button>
                 )}
+                {isAdmin && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="ml-auto text-destructive hover:text-destructive"
+                    onClick={() => deleteTeam(t.id, t.name)}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                )}
               </div>
 
               {memberIds.length === 0 ? (
@@ -130,21 +149,23 @@ export function TeamManagement({
                           <AvatarFallback className="text-[9px]">{initials(u?.name)}</AvatarFallback>
                         </Avatar>
                         <span className="text-sm">{u?.name ?? uid}</span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="ml-auto text-destructive hover:text-destructive"
-                          onClick={() => removeMember(t.id, uid)}
-                        >
-                          <UserMinus className="size-4" />
-                        </Button>
+                        {isAdmin && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="ml-auto text-destructive hover:text-destructive"
+                            onClick={() => removeMember(t.id, uid)}
+                          >
+                            <UserMinus className="size-4" />
+                          </Button>
+                        )}
                       </li>
                     );
                   })}
                 </ul>
               )}
 
-              {candidates.length > 0 && (
+              {isAdmin && candidates.length > 0 && (
                 <div className="flex items-end gap-2">
                   <Select value={pick[t.id] ?? ''} onValueChange={(v) => setPick((p) => ({ ...p, [t.id]: v }))}>
                     <SelectTrigger size="sm" className="w-[220px]">

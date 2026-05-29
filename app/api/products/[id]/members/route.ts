@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { getOrgContext, isOrgMember } from '@/lib/org-guard';
+import { getOrgContext, isOrgMember, isOrgAdmin } from '@/lib/org-guard';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -16,8 +16,8 @@ export async function POST(req: Request, { params }: Params) {
   const product = await prisma.product.findUnique({ where: { id: productId }, select: { organizationId: true } });
   if (!product) return new Response('Not found', { status: 404 });
 
-  // Requester must belong to the product's org; so must the target user.
-  if (!(await isOrgMember(product.organizationId, ctx.userId))) return new Response('Forbidden', { status: 403 });
+  // Requester must be an org admin/owner; the target must belong to the org.
+  if (!(await isOrgAdmin(product.organizationId, ctx.userId))) return new Response('Admins only', { status: 403 });
   if (!(await isOrgMember(product.organizationId, userId))) {
     return new Response('Target user is not a member of this organization', { status: 400 });
   }
@@ -30,6 +30,9 @@ export async function POST(req: Request, { params }: Params) {
     }
   } else {
     await prisma.productMember.deleteMany({ where: { productId, userId } });
+    // On-event cleanup: drop the product once its last member is removed.
+    const remaining = await prisma.productMember.count({ where: { productId } });
+    if (remaining === 0) await prisma.product.delete({ where: { id: productId } });
   }
   return new Response(null, { status: 204 });
 }

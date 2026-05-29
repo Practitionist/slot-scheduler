@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, Copy, Plus, Users } from 'lucide-react';
+import { Check, Copy, Plus, Trash2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { authClient } from '@/lib/auth-client';
 import { TeamManagement } from '@/components/TeamManagement';
@@ -41,6 +41,10 @@ export default function OrgPage() {
   // `teams` is present on the full org at runtime (teams enabled) but not on the
   // hook's inferred type — read it through a typed accessor.
   const teams = ((activeOrg as { teams?: { id: string; name: string }[] } | null)?.teams) ?? [];
+  const myUserId = session?.user?.id;
+  const myRole = activeOrg?.members?.find((m) => m.userId === myUserId)?.role ?? null;
+  const isAdmin = myRole === 'owner' || myRole === 'admin';
+  const isOwner = myRole === 'owner';
 
   const [orgName, setOrgName] = useState('');
   const [starterTeams, setStarterTeams] = useState<string[]>(['Engineering', 'UI/UX', 'Testing']);
@@ -104,6 +108,20 @@ export default function OrgPage() {
       setInviteEmail('');
     }
     setBusy(false);
+  }
+
+  async function changeRole(memberId: string, role: string) {
+    const { error } = await authClient.organization.updateMemberRole({ memberId, role });
+    if (error) toast.error(error.message ?? 'Could not change role');
+    else { toast.success(role === 'owner' ? 'Ownership transferred' : `Role set to ${role}`); router.refresh(); }
+  }
+
+  async function deleteOrg() {
+    if (!activeOrg) return;
+    if (!confirm(`Delete "${activeOrg.name}"? This permanently removes its teams, products and invitations.`)) return;
+    const { error } = await authClient.organization.delete({ organizationId: activeOrg.id });
+    if (error) toast.error(error.message ?? 'Could not delete organization');
+    else { toast.success('Organization deleted'); router.refresh(); }
   }
 
   if (isPending) return null;
@@ -230,11 +248,12 @@ export default function OrgPage() {
             teams={teams}
             members={activeOrg.members ?? []}
             activeTeamId={activeTeamId}
+            isAdmin={isAdmin}
             onChanged={() => router.refresh()}
           />
 
           {/* Products (cross-cutting axis) */}
-          <ProductManagement members={activeOrg.members ?? []} />
+          <ProductManagement members={activeOrg.members ?? []} isAdmin={isAdmin} />
 
           {/* Invite */}
           <Card>
@@ -283,8 +302,19 @@ export default function OrgPage() {
                       <AvatarFallback className="text-xs">{initials(m.user.name)}</AvatarFallback>
                     </Avatar>
                     <span className="text-sm font-medium">{m.user.name}</span>
-                    <span className="text-muted-foreground text-sm">{m.user.email}</span>
-                    <Badge variant="outline" className="ml-auto">{m.role}</Badge>
+                    <span className="text-muted-foreground hidden text-sm sm:inline">{m.user.email}</span>
+                    {isAdmin && m.userId !== myUserId ? (
+                      <Select value={m.role} onValueChange={(r) => changeRole(m.id, r)}>
+                        <SelectTrigger size="sm" className="ml-auto w-[150px]"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="member">member</SelectItem>
+                          <SelectItem value="admin">admin</SelectItem>
+                          {isOwner && <SelectItem value="owner">owner (transfer)</SelectItem>}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Badge variant="outline" className="ml-auto">{m.role}</Badge>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -316,6 +346,23 @@ export default function OrgPage() {
                     </li>
                   ))}
                 </ul>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Danger zone — owner only */}
+          {isOwner && (
+            <Card className="border-destructive/40">
+              <CardHeader>
+                <CardTitle className="text-destructive text-base">Danger zone</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-muted-foreground text-sm">
+                  Permanently delete {activeOrg.name} and all of its teams, products and invitations.
+                </p>
+                <Button variant="destructive" onClick={deleteOrg}>
+                  <Trash2 className="size-4" /> Delete organization
+                </Button>
               </CardContent>
             </Card>
           )}

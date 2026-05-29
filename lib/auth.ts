@@ -1,4 +1,5 @@
 import { betterAuth } from 'better-auth';
+import { APIError } from 'better-auth/api';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { organization } from 'better-auth/plugins/organization';
 import { prisma } from './prisma';
@@ -47,7 +48,34 @@ export const auth = betterAuth({
         input: true,
       },
     },
+    deleteUser: {
+      enabled: true,
+      // Succession guard: you must transfer ownership before deleting your
+      // account if you own an org with other members; orgs where you're the
+      // sole member are deleted with you (cascade removes teams/products/etc.).
+      beforeDelete: async (user) => {
+        const owned = await prisma.member.findMany({
+          where: { userId: user.id, role: 'owner' },
+          select: { organizationId: true },
+        });
+        for (const m of owned) {
+          const others = await prisma.member.count({
+            where: { organizationId: m.organizationId, NOT: { userId: user.id } },
+          });
+          if (others > 0) {
+            throw new APIError('BAD_REQUEST', {
+              message: 'Transfer ownership of your organization(s) before deleting your account.',
+            });
+          }
+        }
+        if (owned.length) {
+          await prisma.organization.deleteMany({ where: { id: { in: owned.map((o) => o.organizationId) } } });
+        }
+      },
+    },
   },
+  // Basic abuse protection (no email dependency).
+  rateLimit: { enabled: true, window: 60, max: 100 },
   plugins: [
     organization({
       // Don't auto-create a default team named after the org — the org-creation
