@@ -20,6 +20,17 @@ export async function POST(req: Request) {
   const products = await prisma.product.deleteMany({ where: { members: { none: {} }, createdAt: { lt: staleCutoff } } });
   // A member-less org is definitively dead — remove it (cascades teams/products/invites).
   const orgs = await prisma.organization.deleteMany({ where: { members: { none: {} } } });
+  // Expired join codes (past their expiresAt).
+  const expiredCodes = await prisma.joinCode.deleteMany({ where: { expiresAt: { lt: now } } });
+  // Exhausted join codes (uses >= maxUses) — uses $queryRaw because Prisma
+  // doesn't support column-to-column comparisons in deleteMany.
+  const exhaustedResult = await prisma.$executeRaw`
+    DELETE FROM "JoinCode"
+    WHERE "maxUses" IS NOT NULL AND "uses" >= "maxUses"
+  `;
+  // Hard-delete appointments that ended more than 90 days ago.
+  const cutoff90 = new Date(now.getTime() - 90 * 86_400_000);
+  const oldAppointments = await prisma.appointment.deleteMany({ where: { endsAt: { lt: cutoff90 } } });
 
   return Response.json({
     ok: true,
@@ -28,6 +39,9 @@ export async function POST(req: Request) {
       emptyTeams: teams.count,
       emptyProducts: products.count,
       memberlessOrgs: orgs.count,
+      expiredJoinCodes: expiredCodes.count,
+      exhaustedJoinCodes: exhaustedResult,
+      oldAppointments: oldAppointments.count,
     },
   });
 }
