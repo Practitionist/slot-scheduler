@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Copy, Plus, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { authClient } from '@/lib/auth-client';
 import { Navbar } from '@/components/Navbar';
+import { TeamManagement } from '@/components/TeamManagement';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,6 +31,9 @@ function initials(name?: string | null) {
 }
 
 export default function OrgPage() {
+  const router = useRouter();
+  const { data: session } = authClient.useSession();
+  const activeTeamId = (session?.session as { activeTeamId?: string } | undefined)?.activeTeamId ?? null;
   const { data: orgs } = authClient.useListOrganizations();
   const { data: activeOrg, isPending } = authClient.useActiveOrganization();
   // `teams` is present on the full org at runtime (teams enabled) but not on the
@@ -154,6 +159,14 @@ export default function OrgPage() {
               </form>
             </CardContent>
           </Card>
+
+          {/* Team membership */}
+          <TeamManagement
+            teams={teams}
+            members={activeOrg.members ?? []}
+            activeTeamId={activeTeamId}
+            onChanged={() => router.refresh()}
+          />
 
           {/* Invite */}
           <Card>
