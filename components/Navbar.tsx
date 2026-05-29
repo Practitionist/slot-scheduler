@@ -35,7 +35,7 @@ export function Navbar({ userName, userImage }: Props) {
 
   async function handleSignOut() {
     await authClient.signOut();
-    router.push('/sign-in');
+    router.push('/auth/sign-in');
     router.refresh();
   }
 

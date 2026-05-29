@@ -59,7 +59,7 @@ export const auth = betterAuth({
         // recoverable, and the /org UI shows a copy-able link to the admin.
         const base = process.env.BETTER_AUTH_URL ?? 'http://localhost:3000';
         console.log(
-          `[invite] ${data.email} -> ${base}/accept-invitation?id=${data.id} (org=${data.organization.name})`
+          `[invite] ${data.email} -> ${base}/auth/accept-invitation?id=${data.id} (org=${data.organization.name})`
         );
       },
     }),
