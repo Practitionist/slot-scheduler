@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { authClient } from '@/lib/auth-client';
 import { Navbar } from '@/components/Navbar';
 import { TeamManagement } from '@/components/TeamManagement';
+import { ProductManagement } from '@/components/ProductManagement';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -167,6 +168,9 @@ export default function OrgPage() {
             activeTeamId={activeTeamId}
             onChanged={() => router.refresh()}
           />
+
+          {/* Products (cross-cutting axis) */}
+          <ProductManagement members={activeOrg.members ?? []} />
 
           {/* Invite */}
           <Card>
