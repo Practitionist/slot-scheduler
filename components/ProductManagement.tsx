@@ -25,7 +25,7 @@ function initials(name?: string | null) {
   return (p.length === 1 ? p[0].slice(0, 2) : p[0][0] + p[p.length - 1][0]).toUpperCase();
 }
 
-export function ProductManagement({ members }: { members: OrgMember[] }) {
+export function ProductManagement({ members, isAdmin }: { members: OrgMember[]; isAdmin: boolean }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [name, setName] = useState('');
   const [pick, setPick] = useState<Record<string, string>>({});
@@ -80,15 +80,17 @@ export function ProductManagement({ members }: { members: OrgMember[] }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
-        <form onSubmit={create} className="flex items-end gap-2">
-          <div className="flex-1 space-y-2">
-            <Label htmlFor="productName">New product</Label>
-            <Input id="productName" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Payments" />
-          </div>
-          <Button type="submit" variant="outline" disabled={!name.trim()}>
-            <Plus className="size-4" /> Add product
-          </Button>
-        </form>
+        {isAdmin && (
+          <form onSubmit={create} className="flex items-end gap-2">
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="productName">New product</Label>
+              <Input id="productName" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Payments" />
+            </div>
+            <Button type="submit" variant="outline" disabled={!name.trim()}>
+              <Plus className="size-4" /> Add product
+            </Button>
+          </form>
+        )}
 
         {products.length === 0 ? (
           <p className="text-muted-foreground text-sm">No products yet.</p>
@@ -99,14 +101,16 @@ export function ProductManagement({ members }: { members: OrgMember[] }) {
               <div key={p.id} className="space-y-2 border-b pb-4 last:border-b-0 last:pb-0">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{p.name}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="ml-auto text-destructive hover:text-destructive"
-                    onClick={() => remove(p.id)}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="ml-auto text-destructive hover:text-destructive"
+                      onClick={() => remove(p.id)}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  )}
                 </div>
 
                 {p.memberIds.length === 0 ? (
@@ -122,21 +126,23 @@ export function ProductManagement({ members }: { members: OrgMember[] }) {
                             <AvatarFallback className="text-[9px]">{initials(u?.name)}</AvatarFallback>
                           </Avatar>
                           <span className="text-sm">{u?.name ?? uid}</span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="ml-auto text-destructive hover:text-destructive"
-                            onClick={() => setMember(p.id, uid, 'remove')}
-                          >
-                            <UserMinus className="size-4" />
-                          </Button>
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="ml-auto text-destructive hover:text-destructive"
+                              onClick={() => setMember(p.id, uid, 'remove')}
+                            >
+                              <UserMinus className="size-4" />
+                            </Button>
+                          )}
                         </li>
                       );
                     })}
                   </ul>
                 )}
 
-                {candidates.length > 0 && (
+                {isAdmin && candidates.length > 0 && (
                   <div className="flex items-end gap-2">
                     <Select value={pick[p.id] ?? ''} onValueChange={(v) => setPick((prev) => ({ ...prev, [p.id]: v }))}>
                       <SelectTrigger size="sm" className="w-[220px]">

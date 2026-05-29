@@ -1,7 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Plus, Trash2, X } from 'lucide-react';
+import { toast } from 'sonner';
+import { authClient } from '@/lib/auth-client';
 import { SlotList } from '@/components/SlotList';
 import { SlotForm } from '@/components/SlotForm';
 import { TimezoneSelect } from '@/components/TimezoneSelect';
@@ -11,9 +14,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import type { AvailabilitySlot } from '@/app/generated/prisma/client';
 
 export default function MySlotsPage() {
+  const router = useRouter();
   const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  async function deleteAccount() {
+    if (!confirm('Delete your account? This permanently removes your data. If you own an organization with other members, transfer ownership first.')) return;
+    const { error } = await authClient.deleteUser();
+    if (error) toast.error(error.message ?? 'Could not delete account');
+    else { toast.success('Account deleted'); router.push('/'); router.refresh(); }
+  }
 
   async function loadSlots() {
     const res = await fetch('/api/slots/me');
@@ -69,6 +80,20 @@ export default function MySlotsPage() {
       ) : (
         <SlotList slots={slots} onRefresh={loadSlots} />
       )}
+
+      <Card className="border-destructive/40 mt-8">
+        <CardHeader>
+          <CardTitle className="text-destructive text-base">Danger zone</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-muted-foreground text-sm">
+            Delete your account and all your data. This can’t be undone.
+          </p>
+          <Button variant="destructive" onClick={deleteAccount}>
+            <Trash2 className="size-4" /> Delete account
+          </Button>
+        </CardContent>
+      </Card>
     </main>
   );
 }

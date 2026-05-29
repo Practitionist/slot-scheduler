@@ -17,3 +17,13 @@ export async function isOrgMember(organizationId: string, userId: string) {
   const member = await prisma.member.findFirst({ where: { organizationId, userId } });
   return Boolean(member);
 }
+
+// owner/admin may manage teams, products, invites and members; plain members
+// can only view. Mirrors Better Auth's default role hierarchy.
+export async function isOrgAdmin(organizationId: string, userId: string) {
+  const member = await prisma.member.findFirst({
+    where: { organizationId, userId },
+    select: { role: true },
+  });
+  return member?.role === 'owner' || member?.role === 'admin';
+}

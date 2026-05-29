@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getSessionCookie } from 'better-auth/cookies';
 
-// Public: the landing page (exact '/') and everything under /auth and /api/auth.
-const PUBLIC_PREFIXES = ['/auth', '/api/auth'];
+// Public: the landing page (exact '/'), /auth, /api/auth, and the secret-guarded
+// cron endpoint (it does its own bearer-token check).
+const PUBLIC_PREFIXES = ['/auth', '/api/auth', '/api/cron'];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

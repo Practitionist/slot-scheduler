@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getOrgContext, isOrgMember } from '@/lib/org-guard';
+import { getOrgContext, isOrgMember, isOrgAdmin } from '@/lib/org-guard';
 
 export async function GET() {
   const ctx = await getOrgContext();
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   const ctx = await getOrgContext();
   if (!ctx.ok) return ctx.res;
   if (!ctx.orgId) return new Response('No active organization', { status: 400 });
-  if (!(await isOrgMember(ctx.orgId, ctx.userId))) return new Response('Forbidden', { status: 403 });
+  if (!(await isOrgAdmin(ctx.orgId, ctx.userId))) return new Response('Admins only', { status: 403 });
 
   const { name } = await req.json();
   if (typeof name !== 'string' || !name.trim()) return new Response('Name is required', { status: 400 });
