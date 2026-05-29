@@ -57,7 +57,8 @@ export function WeeklyHeatmap({ cells, maxCount }: Props) {
                 <div
                   className={cn(
                     'h-7 rounded-[3px] border transition-colors',
-                    count === 0 ? 'bg-card border-border/60' : 'border-transparent'
+                    count === 0 ? 'bg-card border-border/60' : 'border-transparent',
+                    cell?.isGolden && 'ring-2 ring-inset ring-amber-400'
                   )}
                   style={colorStyle(count)}
                 />
@@ -115,6 +116,10 @@ export function WeeklyHeatmap({ cells, maxCount }: Props) {
           ))}
         </div>
         <span>More available</span>
+        <span className="ml-3 flex items-center gap-1.5">
+          <span className="size-4 rounded-sm ring-2 ring-inset ring-amber-400" />
+          Best window
+        </span>
       </div>
     </div>
   );
