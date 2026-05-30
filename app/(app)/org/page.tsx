@@ -124,23 +124,36 @@ export default function OrgPage() {
     setBusy(false);
   }
 
-  async function invite(e: React.FormEvent) {
-    e.preventDefault();
+  async function createInviteLink(): Promise<string | null> {
     setBusy(true);
     const { data, error } = await authClient.organization.inviteMember({
       email: inviteEmail,
       role: 'member',
       teamId: inviteTeam === 'none' ? undefined : inviteTeam,
     });
+    setBusy(false);
     if (error || !data) {
       toast.error(error?.message ?? 'Could not create invitation');
-    } else {
-      const link = `${window.location.origin}/auth/accept-invitation?id=${data.id}`;
-      await navigator.clipboard.writeText(link).catch(() => {});
-      toast.success('Invite link copied — share it with the intern', { description: link });
-      setInviteEmail('');
+      return null;
     }
-    setBusy(false);
+    setInviteEmail('');
+    return `${window.location.origin}/auth/accept-invitation?id=${data.id}`;
+  }
+
+  async function invite(e: React.FormEvent) {
+    e.preventDefault();
+    const link = await createInviteLink();
+    if (!link) return;
+    await navigator.clipboard.writeText(link).catch(() => {});
+    toast.success('Invite link copied — share it with the intern', { description: link });
+  }
+
+  async function inviteViaWhatsApp() {
+    const link = await createInviteLink();
+    if (!link) return;
+    shareOnWhatsApp(
+      `Hi! You've been invited to join *${activeOrg?.name}* on Slot Scheduler.\n\nAccept your invitation here: ${link}`
+    );
   }
 
   async function generateCode(e: React.FormEvent) {
@@ -344,9 +357,19 @@ export default function OrgPage() {
                 </div>
                 <div className="space-y-2">
                   <Label className="invisible select-none">Action</Label>
-                  <Button type="submit" disabled={busy || !inviteEmail.trim()}>
-                    <Copy className="size-4" /> Create invite link
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button type="submit" variant="outline" disabled={busy || !inviteEmail.trim()}>
+                      <Copy className="size-4" /> Copy link
+                    </Button>
+                    <Button
+                      type="button"
+                      disabled={busy || !inviteEmail.trim()}
+                      className="bg-[#25D366] text-white hover:bg-[#1ebe5d]"
+                      onClick={inviteViaWhatsApp}
+                    >
+                      <WhatsAppIcon className="size-4" /> WhatsApp
+                    </Button>
+                  </div>
                 </div>
               </form>
               <p className="text-muted-foreground mt-2 text-xs">
