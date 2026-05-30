@@ -338,38 +338,37 @@ export default function OrgPage() {
               <CardTitle className="text-base">Invite a member</CardTitle>
             </CardHeader>
             <CardContent>
-              <form onSubmit={invite} className="flex flex-wrap items-end gap-2">
-                <div className="min-w-[200px] flex-1 space-y-2">
-                  <Label htmlFor="inviteEmail">Email</Label>
-                  <Input id="inviteEmail" type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} required placeholder="intern@example.com" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Team (optional)</Label>
-                  <Select value={inviteTeam} onValueChange={setInviteTeam}>
-                    <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No team</SelectItem>
-                      {teams.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="invisible select-none">Action</Label>
-                  <div className="flex gap-2">
-                    <Button type="submit" variant="outline" disabled={busy || !inviteEmail.trim()}>
-                      <Copy className="size-4" /> Copy link
-                    </Button>
-                    <Button
-                      type="button"
-                      disabled={busy || !inviteEmail.trim()}
-                      className="bg-[#25D366] text-white hover:bg-[#1ebe5d]"
-                      onClick={inviteViaWhatsApp}
-                    >
-                      <WhatsAppIcon className="size-4" /> WhatsApp
-                    </Button>
+              <form onSubmit={invite} className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  <div className="min-w-[200px] flex-1 space-y-2">
+                    <Label htmlFor="inviteEmail">Email</Label>
+                    <Input id="inviteEmail" type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} required placeholder="intern@example.com" />
                   </div>
+                  <div className="space-y-2">
+                    <Label>Team (optional)</Label>
+                    <Select value={inviteTeam} onValueChange={setInviteTeam}>
+                      <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No team</SelectItem>
+                        {teams.map((t) => (
+                          <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button type="submit" variant="outline" disabled={busy || !inviteEmail.trim()}>
+                    <Copy className="size-4" /> Copy link
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={busy || !inviteEmail.trim()}
+                    className="bg-[#25D366] text-white hover:bg-[#1ebe5d]"
+                    onClick={inviteViaWhatsApp}
+                  >
+                    <WhatsAppIcon className="size-4" /> WhatsApp
+                  </Button>
                 </div>
               </form>
               <p className="text-muted-foreground mt-2 text-xs">
