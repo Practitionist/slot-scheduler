@@ -342,9 +342,12 @@ export default function OrgPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button type="submit" disabled={busy || !inviteEmail.trim()}>
-                  <Copy className="size-4" /> Create invite link
-                </Button>
+                <div className="space-y-2">
+                  <Label className="invisible select-none">Action</Label>
+                  <Button type="submit" disabled={busy || !inviteEmail.trim()}>
+                    <Copy className="size-4" /> Create invite link
+                  </Button>
+                </div>
               </form>
               <p className="text-muted-foreground mt-2 text-xs">
                 An email is sent to the invitee automatically. The accept link is also copied to your clipboard as a backup.
