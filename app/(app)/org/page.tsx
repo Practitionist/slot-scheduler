@@ -132,9 +132,17 @@ export default function OrgPage() {
       setBusy(false);
       return;
     }
-    const { orgId } = (await res.json().catch(() => ({}))) as { orgId?: string };
+    const { orgId, orgName, alreadyMember } = (await res.json().catch(() => ({}))) as {
+      orgId?: string;
+      orgName?: string;
+      alreadyMember?: boolean;
+    };
     if (orgId) await authClient.organization.setActive({ organizationId: orgId });
-    toast.success('Joined successfully!');
+    toast.success(
+      alreadyMember
+        ? `You're already a member${orgName ? ` of ${orgName}` : ''}.`
+        : `Joined${orgName ? ` ${orgName}` : ''}!`
+    );
     setJoinCodeInput('');
     setBusy(false);
     router.refresh();

@@ -5,33 +5,38 @@ import { prisma } from '@/lib/prisma';
 
 export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) return new Response('Unauthorized', { status: 401 });
+  // The client funnels unauthenticated users through sign-in before they ever
+  // POST here, so a 401 is a genuine edge case — keep the message actionable.
+  if (!session?.user) return new Response('Please sign in to join.', { status: 401 });
 
   const body = await req.json().catch(() => ({}));
   const rawCode = typeof body.code === 'string' ? body.code.trim().toUpperCase() : '';
-  if (!rawCode) return new Response('Code is required', { status: 400 });
+  if (!rawCode) return new Response('Enter a join code.', { status: 400 });
 
   const joinCode = await prisma.joinCode.findUnique({ where: { code: rawCode } });
-  if (!joinCode) return new Response('Invalid join code', { status: 404 });
-  if (joinCode.expiresAt && joinCode.expiresAt < new Date()) {
-    return new Response('Join code has expired', { status: 410 });
-  }
-  if (joinCode.maxUses !== null && joinCode.uses >= joinCode.maxUses) {
-    return new Response('Join code has reached its maximum uses', { status: 410 });
-  }
+  if (!joinCode) return new Response("That join code doesn't exist. Double-check it with your admin.", { status: 404 });
 
   const org = await prisma.organization.findUnique({
     where: { id: joinCode.orgId },
-    select: { slug: true },
+    select: { slug: true, name: true },
   });
-  if (!org) return new Response('Organization no longer exists', { status: 410 });
+  if (!org) return new Response('That organization no longer exists.', { status: 410 });
 
-  // Check if already a member of the org.
+  // Is the user already in this org? If so the join is a no-op success — never
+  // block them with expiry/usage limits when re-opening a link they already used.
   const existing = await prisma.member.findFirst({
     where: { organizationId: joinCode.orgId, userId: session.user.id },
   });
+  const alreadyMember = !!existing;
 
-  if (!existing) {
+  if (!alreadyMember) {
+    if (joinCode.expiresAt && joinCode.expiresAt < new Date()) {
+      return new Response('This join code has expired. Ask an admin for a fresh one.', { status: 410 });
+    }
+    if (joinCode.maxUses !== null && joinCode.uses >= joinCode.maxUses) {
+      return new Response('This join code has reached its maximum uses. Ask an admin for a fresh one.', { status: 410 });
+    }
+
     await prisma.member.create({
       data: {
         id: crypto.randomUUID(),
@@ -43,7 +48,8 @@ export async function POST(req: Request) {
     });
   }
 
-  // Optionally add to team.
+  // Optionally add to team (idempotent — the code may scope to a team the
+  // existing member hasn't joined yet).
   if (joinCode.teamId) {
     const alreadyInTeam = await prisma.teamMember.findFirst({
       where: { teamId: joinCode.teamId, userId: session.user.id },
@@ -60,7 +66,7 @@ export async function POST(req: Request) {
     }
   }
 
-  // Optionally add to product.
+  // Optionally add to product (idempotent).
   if (joinCode.productId) {
     const alreadyInProduct = await prisma.productMember.findFirst({
       where: { productId: joinCode.productId, userId: session.user.id },
@@ -75,11 +81,13 @@ export async function POST(req: Request) {
     }
   }
 
-  // Increment usage counter.
-  await prisma.joinCode.update({
-    where: { id: joinCode.id },
-    data: { uses: { increment: 1 } },
-  });
+  // Only a genuinely new membership consumes a use — re-runs don't burn seats.
+  if (!alreadyMember) {
+    await prisma.joinCode.update({
+      where: { id: joinCode.id },
+      data: { uses: { increment: 1 } },
+    });
+  }
 
-  return NextResponse.json({ orgSlug: org.slug, orgId: joinCode.orgId });
+  return NextResponse.json({ orgSlug: org.slug, orgId: joinCode.orgId, orgName: org.name, alreadyMember });
 }
