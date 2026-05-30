@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, Copy, Key, Plus, Trash2, Users } from 'lucide-react';
+import { Check, Copy, Key, LogIn, Plus, Trash2, Users } from 'lucide-react';
 
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
@@ -64,6 +64,7 @@ export default function OrgPage() {
   const [teamName, setTeamName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteTeam, setInviteTeam] = useState<string>('none');
+  const [joinCodeInput, setJoinCodeInput] = useState('');
   const [busy, setBusy] = useState(false);
 
   type JoinCode = {
@@ -113,6 +114,38 @@ export default function OrgPage() {
     toast.success(`Created ${orgName}${starterTeams.length ? ` with ${starterTeams.length} team(s)` : ''}`);
     setOrgName('');
     setBusy(false);
+  }
+
+  async function joinWithCode(e: React.FormEvent) {
+    e.preventDefault();
+    const code = joinCodeInput.trim().toUpperCase();
+    if (!code) return;
+    setBusy(true);
+    const res = await fetch('/api/join', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      toast.error(text || 'Invalid or expired code');
+      setBusy(false);
+      return;
+    }
+    const { orgId, orgName, alreadyMember } = (await res.json().catch(() => ({}))) as {
+      orgId?: string;
+      orgName?: string;
+      alreadyMember?: boolean;
+    };
+    if (orgId) await authClient.organization.setActive({ organizationId: orgId });
+    toast.success(
+      alreadyMember
+        ? `You're already a member${orgName ? ` of ${orgName}` : ''}.`
+        : `Joined${orgName ? ` ${orgName}` : ''}!`
+    );
+    setJoinCodeInput('');
+    setBusy(false);
+    router.refresh();
   }
 
   async function createTeam(e: React.FormEvent) {
@@ -203,6 +236,37 @@ export default function OrgPage() {
 
   if (isPending) return null;
 
+  const joinCard = (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <LogIn className="size-4" /> Join an organization
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={joinWithCode} className="flex flex-wrap items-end gap-2">
+          <div className="min-w-[200px] flex-1 space-y-2">
+            <Label htmlFor="joinCode">Join code</Label>
+            <Input
+              id="joinCode"
+              value={joinCodeInput}
+              onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
+              placeholder="e.g. AB3X7YKZ"
+              maxLength={12}
+              autoComplete="off"
+            />
+          </div>
+          <Button type="submit" variant="outline" disabled={busy || !joinCodeInput.trim()}>
+            <LogIn className="size-4" /> Join
+          </Button>
+        </form>
+        <p className="text-muted-foreground mt-2 text-xs">
+          Enter a join code shared by an admin to join their organization.
+        </p>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <main className="mx-auto max-w-3xl">
 
@@ -226,6 +290,7 @@ export default function OrgPage() {
       </div>
 
       {!activeOrg ? (
+        <div className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Create your organization</CardTitle>
@@ -289,8 +354,11 @@ export default function OrgPage() {
             </form>
           </CardContent>
         </Card>
+        {joinCard}
+        </div>
       ) : (
         <div className="space-y-6">
+          {joinCard}
           {/* Teams */}
           <Card>
             <CardHeader>

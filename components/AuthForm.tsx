@@ -7,6 +7,7 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { authClient } from '@/lib/auth-client';
 import { friendlyAuthError } from '@/lib/auth-errors';
+import { safeReturnTo } from '@/lib/safe-redirect';
 import { SocialAuthButtons } from '@/components/SocialAuthButtons';
 import type { OAuthProvider } from '@/lib/oauth';
 import { Button } from '@/components/ui/button';
@@ -25,15 +26,24 @@ import {
 type Props = {
   mode: 'sign-in' | 'sign-up';
   providers: OAuthProvider[];
+  /** Where to land after auth succeeds (e.g. back to `/join?code=…`). */
+  returnTo?: string;
 };
 
-export function AuthForm({ mode, providers }: Props) {
+export function AuthForm({ mode, providers, returnTo }: Props) {
   const isSignUp = mode === 'sign-up';
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  const destination = safeReturnTo(returnTo);
+  // Carry the destination across the sign-in ⇄ sign-up toggle so the user never
+  // loses their place mid-funnel.
+  const toggleHref =
+    (isSignUp ? '/auth/sign-in' : '/auth/sign-up') +
+    (returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : '');
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -55,7 +65,7 @@ export function AuthForm({ mode, providers }: Props) {
       toast.error(friendlyAuthError(result.error, `${isSignUp ? 'Sign up' : 'Sign in'} failed. Please try again.`));
     } else {
       toast.success(isSignUp ? 'Account created!' : 'Welcome back!');
-      router.push('/overview');
+      router.push(destination);
       router.refresh();
     }
   }
@@ -72,7 +82,7 @@ export function AuthForm({ mode, providers }: Props) {
         <CardContent className="space-y-4">
           {providers.length > 0 && (
             <>
-              <SocialAuthButtons providers={providers} />
+              <SocialAuthButtons providers={providers} callbackURL={destination} />
               <div className="flex items-center gap-3">
                 <Separator className="flex-1" />
                 <span className="text-muted-foreground text-xs">or</span>
@@ -133,7 +143,7 @@ export function AuthForm({ mode, providers }: Props) {
           <p className="text-muted-foreground text-sm">
             {isSignUp ? 'Already have an account? ' : 'No account? '}
             <Link
-              href={isSignUp ? '/auth/sign-in' : '/auth/sign-up'}
+              href={toggleHref}
               className="text-foreground font-medium underline-offset-4 hover:underline"
             >
               {isSignUp ? 'Sign in' : 'Sign up'}
