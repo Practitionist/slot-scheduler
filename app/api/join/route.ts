@@ -81,5 +81,5 @@ export async function POST(req: Request) {
     data: { uses: { increment: 1 } },
   });
 
-  return NextResponse.json({ orgSlug: org.slug });
+  return NextResponse.json({ orgSlug: org.slug, orgId: joinCode.orgId });
 }
